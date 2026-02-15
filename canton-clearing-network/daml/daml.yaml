@@ -1,4 +1,4 @@
-sdk-version: 2.9.0
+sdk-version: 3.4.8
 name: canton-clearing-network
 version: 0.1.0
 source: src
