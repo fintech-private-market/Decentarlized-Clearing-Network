@@ -123,10 +123,10 @@ The Java integration layer provides a client library for interacting with the Ca
 
 ## 📖 Documentation
 
-- [Architecture Documentation](docs/en/architecture.md)
-- [API Reference](docs/en/api-reference.md)
-- [Migration Guide](docs/en/migration-guide.md)
-- [Documentação em Português](docs/pt-br/)
+- [Architecture Documentation (English)](docs/en/ARCHITECTURE.md)
+- [Documentação de Arquitetura (Português)](docs/pt-br/ARQUITETURA.md)
+- [Project Summary](PROJECT_SUMMARY.md)
+- Migration Guide - See [migration-tools/README.md](migration-tools/README.md)
 
 ## 🤝 Contributing
 
