@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Daml Builder Service
+  # Use this to build the Canton Clearing Network Daml project
+  daml-builder:
+    image: ubuntu:22.04
+    container_name: canton-daml-builder
+    working_dir: /workspace/canton-clearing-network/daml
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        echo '========================================' &&
+        echo 'Canton Clearing Network - Daml Builder' &&
+        echo '========================================' &&
+        echo '' &&
+        echo 'Installing Daml SDK...' &&
+        apt-get update -qq &&
+        apt-get install -y -qq curl ca-certificates &&
+        curl -sSL https://get.daml.com/ | sh &&
+        export PATH=\"/root/.daml/bin:\$PATH\" &&
+        echo '' &&
+        echo 'Daml SDK Version:' &&
+        daml version &&
+        echo '' &&
+        echo 'Building project...' &&
+        daml build &&
+        echo '' &&
+        echo '✅ Build complete!' &&
+        echo 'DAR file location: .daml/dist/canton-clearing-network-0.1.0.dar' &&
+        ls -lh .daml/dist/canton-clearing-network-0.1.0.dar &&
+        echo '' &&
+        echo 'Running tests...' &&
+        daml test &&
+        echo '' &&
+        echo '✅ All tests passed!' &&
+        echo '' &&
+        echo 'Inspecting DAR file...' &&
+        daml damlc inspect-dar .daml/dist/canton-clearing-network-0.1.0.dar
+      "
+    network_mode: bridge
+
+  # Daml Test Service
+  # Use this to run tests only
+  daml-test:
+    image: ubuntu:22.04
+    container_name: canton-daml-test
+    working_dir: /workspace/canton-clearing-network/daml
+    volumes:
+      - .:/workspace
+    command: >
+      bash -c "
+        echo 'Installing Daml SDK...' &&
+        apt-get update -qq &&
+        apt-get install -y -qq curl ca-certificates &&
+        curl -sSL https://get.daml.com/ | sh &&
+        export PATH=\"/root/.daml/bin:\$PATH\" &&
+        echo '' &&
+        echo 'Running tests...' &&
+        daml test
+      "
+    network_mode: bridge
+
+  # Interactive Daml Development Environment
+  # Use this for interactive development
+  daml-dev:
+    image: ubuntu:22.04
+    container_name: canton-daml-dev
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+    stdin_open: true
+    tty: true
+    command: >
+      bash -c "
+        echo 'Installing Daml SDK...' &&
+        apt-get update -qq &&
+        apt-get install -y -qq curl ca-certificates git vim nano &&
+        curl -sSL https://get.daml.com/ | sh &&
+        export PATH=\"/root/.daml/bin:\$PATH\" &&
+        echo '' &&
+        echo '========================================' &&
+        echo 'Daml Development Environment Ready!' &&
+        echo '========================================' &&
+        echo '' &&
+        echo 'Available commands:' &&
+        echo '  daml build        - Build the project' &&
+        echo '  daml test         - Run tests' &&
+        echo '  daml version      - Show Daml version' &&
+        echo '  cd canton-clearing-network/daml' &&
+        echo '' &&
+        echo 'Type \"exit\" to leave the container' &&
+        echo '' &&
+        bash
+      "
+    network_mode: bridge

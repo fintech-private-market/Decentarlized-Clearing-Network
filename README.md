@@ -46,10 +46,15 @@ Provides low cost, fast, and secure settlement for hybrid decentralized exchange
 **Próximos Passos / Next Steps**:
 1. ✅ ~~Criar novo projeto Canton~~ COMPLETO!
 2. ✅ ~~Validar código Daml~~ COMPLETO!
-3. ⏳ **Instalar Daml SDK e construir projeto / Install Daml SDK and build project** ← **PRÓXIMO PASSO / NEXT STEP**
+3. 🔄 **Instalar Daml SDK e construir projeto / Install Daml SDK and build project** ← **EM ANDAMENTO / IN PROGRESS**
+   - Documentação de instalação criada / Installation documentation created
+   - Script de instalação preparado / Installation script prepared
+   - Aguardando acesso à rede ou método alternativo / Waiting for network access or alternative method
 4. ⏳ Executar e validar testes / Run and validate tests
 5. ⏳ Instalar Canton SDK e fazer deploy / Install Canton SDK and deploy
 6. ⏳ Implementar integração Java / Implement Java integration
+
+📝 **Ver guia de instalação / See installation guide**: [DAML_SDK_INSTALLATION.md](DAML_SDK_INSTALLATION.md)
 
 📊 **Ver detalhes completos / See full details**: [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md)
 
