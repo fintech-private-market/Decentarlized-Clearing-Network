@@ -36,9 +36,20 @@ cd canton-clearing-network/daml
 daml build
 ```
 
+Or use the provided script (already executable):
+```bash
+cd canton-clearing-network
+./scripts/build.sh
+```
+
 3. Run tests:
 ```bash
 daml test
+```
+
+Or use the provided script:
+```bash
+./scripts/test.sh
 ```
 
 ### Running Canton Locally
@@ -49,10 +60,17 @@ cd canton-clearing-network
 canton -c canton-config/local/local.conf
 ```
 
+Or use the provided script (already executable):
+```bash
+./scripts/start-local.sh
+```
+
 2. Deploy DAR file:
 ```bash
 daml ledger upload-dar .daml/dist/canton-clearing-network-0.1.0.dar --host localhost --port 4002
 ```
+
+**Note**: All scripts in the `scripts/` directory are already marked as executable.
 
 ## 📁 Project Structure
 
