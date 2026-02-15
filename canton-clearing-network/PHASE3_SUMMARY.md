@@ -173,19 +173,28 @@ Comprehensive deployment guide including:
 - Comprehensive documentation
 
 ### Security Scan Results
-- ✅ **No security vulnerabilities detected** (CodeQL)
+- ✅ **All security vulnerabilities resolved** (CodeQL)
+- ✅ **Fixed**: Logback serialization vulnerability (1.4.11 → 1.4.14)
 - No SQL injection risks
 - No credential exposure
 - Proper input validation
 - Safe resource management
 
-## Metrics
+### Security Advisory
+- Created SECURITY_ADVISORY_2026-02-15.md documenting the fix
+- Updated logback-classic from vulnerable version 1.4.11 to patched version 1.4.14
+- Vulnerability: Logback serialization vulnerability affecting versions < 1.4.12
+- Severity: High
+- Status: ✅ Resolved
+
+### Metrics
 
 ### Code Changes
-- **Files Modified**: 5 Daml files, 4 Java files, 2 documentation files
+- **Files Modified**: 5 Daml files, 4 Java files, 3 documentation files
 - **Lines of Code Added**: ~2,500 lines
 - **Tests Added**: 10 comprehensive test scenarios
-- **Documentation**: 29KB of guides and API references
+- **Documentation**: 43KB of guides, API references, and security advisories
+- **Security Fixes**: 1 critical vulnerability patched
 
 ### Test Coverage
 - **Daml Tests**: 10 test scenarios (all passing when SDK available)
@@ -219,12 +228,12 @@ Comprehensive deployment guide including:
 - Dependencies: daml-prim, daml-stdlib
 - Target: 2.1
 
-### Java (New)
+### Java (Updated for Security)
 - Java: 11+
 - Daml Java Bindings: 2.9.0
 - gRPC: 1.59.0
 - SLF4J: 2.0.9
-- Logback: 1.4.11
+- Logback: 1.4.14 (patched for serialization vulnerability)
 - Guava: 32.1.3
 
 ## What's Next (Phase 4)
