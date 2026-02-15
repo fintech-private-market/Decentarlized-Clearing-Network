@@ -1,0 +1,106 @@
+-- DCN Operator Template
+-- Represents the DCN operator role and administrative functions
+
+module DCNOperator where
+
+-- DCN Operator Role Template
+template DCNOperatorRole
+  with
+    operator : Party
+    isActive : Bool
+    permissions : [Permission]
+  where
+    signatory operator
+    
+    key operator : Party
+    maintainer key
+    
+    -- Choice to grant permission
+    choice GrantPermission : ContractId DCNOperatorRole
+      with
+        permission : Permission
+      controller operator
+      do
+        create this with permissions = permission :: permissions
+    
+    -- Choice to revoke permission
+    choice RevokePermission : ContractId DCNOperatorRole
+      with
+        permission : Permission
+      controller operator
+      do
+        create this with permissions = filter (/= permission) permissions
+    
+    -- Choice to deactivate operator
+    choice DeactivateOperator : ContractId DCNOperatorRole
+      controller operator
+      do
+        create this with isActive = False
+
+-- Permission types
+data Permission = 
+    RegisterUser
+  | RegisterExchange
+  | RegisterAsset
+  | ProcessSettlement
+  | ManageSessions
+  | EmergencyStop
+  | UpdateFees
+  deriving (Eq, Show)
+
+-- Network Configuration Template
+template NetworkConfiguration
+  with
+    operator : Party
+    maxUsers : Int              -- Maximum number of users (2^64)
+    maxExchanges : Int          -- Maximum number of exchanges (2^32)
+    maxAssets : Int             -- Maximum number of assets (2^32)
+    defaultSettlementFee : Decimal
+    emergencyStopEnabled : Bool
+    version : Text
+  where
+    signatory operator
+    
+    key operator : Party
+    maintainer key
+    
+    -- Choice to update configuration
+    choice UpdateConfiguration : ContractId NetworkConfiguration
+      with
+        newMaxUsers : Int
+        newMaxExchanges : Int
+        newMaxAssets : Int
+        newDefaultFee : Decimal
+      controller operator
+      do
+        create this with
+          maxUsers = newMaxUsers
+          maxExchanges = newMaxExchanges
+          maxAssets = newMaxAssets
+          defaultSettlementFee = newDefaultFee
+    
+    -- Choice to enable emergency stop
+    choice EnableEmergencyStop : ContractId NetworkConfiguration
+      controller operator
+      do
+        create this with emergencyStopEnabled = True
+    
+    -- Choice to disable emergency stop
+    choice DisableEmergencyStop : ContractId NetworkConfiguration
+      controller operator
+      do
+        create this with emergencyStopEnabled = False
+
+-- Operator Action Log Template
+template OperatorActionLog
+  with
+    operator : Party
+    actionId : Int
+    action : Text
+    timestamp : Time
+    details : Text
+  where
+    signatory operator
+    
+    key (operator, actionId) : (Party, Int)
+    maintainer key._1
