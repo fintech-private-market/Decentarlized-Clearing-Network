@@ -5,7 +5,7 @@ module Session where
 
 import DA.Time
 
--- Trading Session Template
+-- Trading Session Template with time-based validation
 template TradingSession
   with
     operator : Party
@@ -13,6 +13,7 @@ template TradingSession
     exchangeId : Int
     startTime : Time
     endTime : Optional Time
+    maxDuration : RelTime      -- Maximum session duration
     status : SessionStatus
     participatingUsers : [Int]  -- User IDs participating
     activeAssets : [Int]        -- Asset IDs active in this session
@@ -22,45 +23,80 @@ template TradingSession
     key (operator, sessionId) : (Party, Int)
     maintainer key._1
     
-    -- Choice to open session
+    -- Ensure session hasn't exceeded max duration if active
+    ensure case endTime of
+      None -> True  -- No end time yet
+      Some end -> end <= addRelTime startTime maxDuration
+    
+    -- Choice to open session with time validation
     choice OpenSession : ContractId TradingSession
+      with
+        currentTime : Time
       controller operator
       do
         assertMsg "Session already active" (status == Pending)
+        assertMsg "Cannot open session before start time" (currentTime >= startTime)
         create this with status = Active
     
-    -- Choice to close session
+    -- Choice to close session with time validation
     choice CloseSession : ContractId TradingSession
       with
         closeTime : Time
       controller operator
       do
         assertMsg "Session must be active" (status == Active)
+        assertMsg "Close time must be after start time" (closeTime > startTime)
+        assertMsg "Session has exceeded maximum duration" 
+          (closeTime <= addRelTime startTime maxDuration)
         create this with 
           status = Closed
           endTime = Some closeTime
     
-    -- Choice to add participant
+    -- Choice to add participant with validation
     choice AddParticipant : ContractId TradingSession
       with
         userId : Int
       controller operator
       do
+        assertMsg "Cannot add participants to closed session" (status /= Closed)
+        assertMsg "User already participating" (notElem userId participatingUsers)
         create this with participatingUsers = userId :: participatingUsers
     
-    -- Choice to add asset
+    -- Choice to add asset with validation
     choice AddAsset : ContractId TradingSession
       with
         assetId : Int
       controller operator
       do
+        assertMsg "Cannot add assets to closed session" (status /= Closed)
+        assertMsg "Asset already active" (notElem assetId activeAssets)
         create this with activeAssets = assetId :: activeAssets
+    
+    -- Choice to suspend session
+    choice SuspendSession : ContractId TradingSession
+      with
+        reason : Text
+      controller operator
+      do
+        assertMsg "Session must be active" (status == Active)
+        create this with status = Suspended
+    
+    -- Choice to resume session
+    choice ResumeSession : ContractId TradingSession
+      with
+        currentTime : Time
+      controller operator
+      do
+        assertMsg "Session must be suspended" (status == Suspended)
+        assertMsg "Session duration exceeded" 
+          (currentTime <= addRelTime startTime maxDuration)
+        create this with status = Active
 
 -- Session status
 data SessionStatus = Pending | Active | Closed | Suspended
   deriving (Eq, Show)
 
--- Settlement Session Template
+-- Settlement Session Template with deadline enforcement
 template SettlementSession
   with
     operator : Party
@@ -70,22 +106,40 @@ template SettlementSession
     status : SessionStatus
     settlementsProcessed : Int
     totalSettlements : Int
+    gracePeriod : RelTime      -- Grace period after deadline
   where
     signatory operator
     
     key (operator, sessionId) : (Party, Int)
     maintainer key._1
     
-    -- Choice to process settlement
+    -- Choice to process settlement with deadline check
     choice ProcessSettlement : ContractId SettlementSession
+      with
+        currentTime : Time
       controller operator
       do
+        assertMsg "Settlement deadline passed" 
+          (currentTime <= addRelTime settlementDeadline gracePeriod)
+        assertMsg "Session must be active" (status == Active)
         create this with settlementsProcessed = settlementsProcessed + 1
     
-    -- Choice to complete session
+    -- Choice to complete session with validation
     choice CompleteSession : ContractId SettlementSession
       controller operator
       do
         assertMsg "All settlements must be processed" 
           (settlementsProcessed == totalSettlements)
+        assertMsg "Session must be active" (status == Active)
         create this with status = Closed
+    
+    -- Choice to extend deadline
+    choice ExtendDeadline : ContractId SettlementSession
+      with
+        newDeadline : Time
+        reason : Text
+      controller operator
+      do
+        assertMsg "New deadline must be in the future" (newDeadline > settlementDeadline)
+        assertMsg "Cannot extend closed session" (status /= Closed)
+        create this with settlementDeadline = newDeadline

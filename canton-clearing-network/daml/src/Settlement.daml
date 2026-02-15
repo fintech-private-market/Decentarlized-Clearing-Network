@@ -32,11 +32,22 @@ template SettlementRequest
         assertMsg "Approver must be a participant" (elem approver participants)
         create this with status = Approved
     
-    -- Choice to execute settlement
+    -- Choice to execute settlement with validation
     choice ExecuteSettlement : ContractId SettlementRequest
       controller operator
       do
         assertMsg "Settlement must be approved" (status == Approved)
+        assertMsg "Transfers must not be empty" (not $ null transfers)
+        
+        -- Validate all transfers
+        forA_ transfers $ \transfer -> do
+          assertMsg "Transfer validation failed" (validateTransfer transfer)
+        
+        -- Check for duplicate nonces (replay protection)
+        let nonces = map (\t -> t.nonce) transfers
+        let uniqueNonces = DA.List.dedup (DA.List.sort nonces)
+        assertMsg "Duplicate nonces detected" (length nonces == length uniqueNonces)
+        
         create this with status = Executed
     
     -- Choice to cancel settlement
@@ -47,20 +58,31 @@ template SettlementRequest
       do
         create this with status = Cancelled
 
--- Transfer data structure
+-- Transfer data structure with enhanced validation
 data Transfer = Transfer
   with
     fromUserId : Int
     toUserId : Int
     assetId : Int
     amount : Decimal
+    nonce : Int              -- Replay protection
+    maxAmount : Optional Decimal  -- Optional maximum transfer limit
   deriving (Eq, Show)
+
+-- Validation helper for transfers
+validateTransfer : Transfer -> Bool
+validateTransfer transfer =
+  transfer.amount > 0.0 &&  -- Amount must be positive
+  transfer.fromUserId /= transfer.toUserId &&  -- Cannot transfer to self
+  case transfer.maxAmount of
+    None -> True
+    Some max -> transfer.amount <= max  -- Respect maximum if set
 
 -- Settlement status
 data SettlementStatus = Pending | Approved | Executed | Cancelled | Failed
   deriving (Eq, Show)
 
--- Multi-party Settlement Template
+-- Multi-party Settlement Template with balance validation
 template MultiPartySettlement
   with
     operator : Party
@@ -69,6 +91,7 @@ template MultiPartySettlement
     balanceChanges : [(Int, Int, Decimal)]  -- (userId, assetId, change)
     signatures : [Party]
     isComplete : Bool
+    minSignatures : Int       -- Minimum signatures required
   where
     signatory operator
     observer parties
@@ -76,7 +99,16 @@ template MultiPartySettlement
     key (operator, settlementId) : (Party, Int)
     maintainer key._1
     
-    -- Choice to add signature
+    -- Validate that balance changes net to zero (conservation of value)
+    ensure 
+      let groupedByAsset = DA.List.groupOn (\(_, assetId, _) -> assetId) 
+                                           (DA.List.sortOn (\(_, assetId, _) -> assetId) balanceChanges)
+          assetSums = map (\changes -> 
+                            foldl (\acc (_, _, amount) -> acc + amount) 0.0 changes) 
+                          groupedByAsset
+      in all (\sum -> abs sum < 0.000001) assetSums  -- Net to zero (with floating point tolerance)
+    
+    -- Choice to add signature with validation
     choice AddSignature : ContractId MultiPartySettlement
       with
         signer : Party
@@ -85,14 +117,17 @@ template MultiPartySettlement
         assertMsg "Signer must be a party" (elem signer parties)
         assertMsg "Already signed" (notElem signer signatures)
         let newSignatures = signer :: signatures
-        let complete = length newSignatures == length parties
+        let complete = length newSignatures >= minSignatures
         create this with 
           signatures = newSignatures
           isComplete = complete
     
-    -- Choice to finalize settlement
+    -- Choice to finalize settlement with full validation
     choice FinalizeSettlement : ()
       controller operator
       do
         assertMsg "Settlement must be complete" isComplete
+        assertMsg "Minimum signatures required" (length signatures >= minSignatures)
+        assertMsg "All balance changes must be non-zero" 
+          (all (\(_, _, amount) -> amount /= 0.0) balanceChanges)
         return ()
