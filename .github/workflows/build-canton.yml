@@ -34,7 +34,7 @@ jobs:
       
       - name: Install Daml SDK
         run: |
-          curl -sSL https://get.daml.com/ | sh
+          curl -sSL https://get.daml.com/ | sh -s -- 3.4.8
           echo "$HOME/.daml/bin" >> $GITHUB_PATH
       
       - name: Verify Daml SDK installation
