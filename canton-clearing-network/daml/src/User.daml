@@ -41,6 +41,7 @@ template UserBalance
   with
     operator : Party
     userId : Int
+    owner : Party
     assetId : Int
     balance : Decimal
     lockedBalance : Decimal
