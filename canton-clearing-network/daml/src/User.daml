@@ -36,7 +36,7 @@ template UserAccount
       do
         create this with metadata = newMetadata
 
--- User Balance Template
+-- User Balance Template with validation
 template UserBalance
   with
     operator : Party
@@ -45,6 +45,7 @@ template UserBalance
     assetId : Int
     balance : Decimal
     lockedBalance : Decimal
+    minBalance : Decimal       -- Minimum balance allowed (e.g., 0.0)
   where
     signatory operator
     observer owner
@@ -52,13 +53,65 @@ template UserBalance
     key (operator, userId, assetId) : (Party, Int, Int)
     maintainer key._1
     
-    -- Choice to update balance (only by operator)
+    -- Ensure balance constraints
+    ensure balance >= minBalance && 
+           lockedBalance >= 0.0 && 
+           lockedBalance <= balance  -- Cannot lock more than available
+    
+    -- Choice to update balance with validation
     choice UpdateBalance : ContractId UserBalance
       with
         newBalance : Decimal
         newLockedBalance : Decimal
       controller operator
       do
+        assertMsg "Balance cannot be negative" (newBalance >= minBalance)
+        assertMsg "Locked balance cannot be negative" (newLockedBalance >= 0.0)
+        assertMsg "Locked balance cannot exceed total balance" 
+          (newLockedBalance <= newBalance)
         create this with 
           balance = newBalance
           lockedBalance = newLockedBalance
+    
+    -- Choice to lock funds for settlement
+    choice LockFunds : ContractId UserBalance
+      with
+        amountToLock : Decimal
+      controller operator
+      do
+        let availableBalance = balance - lockedBalance
+        assertMsg "Insufficient available balance" (amountToLock <= availableBalance)
+        assertMsg "Amount to lock must be positive" (amountToLock > 0.0)
+        create this with lockedBalance = lockedBalance + amountToLock
+    
+    -- Choice to unlock funds after settlement
+    choice UnlockFunds : ContractId UserBalance
+      with
+        amountToUnlock : Decimal
+      controller operator
+      do
+        assertMsg "Cannot unlock more than locked" (amountToUnlock <= lockedBalance)
+        assertMsg "Amount to unlock must be positive" (amountToUnlock > 0.0)
+        create this with lockedBalance = lockedBalance - amountToUnlock
+    
+    -- Choice to transfer funds (debit)
+    choice DebitBalance : ContractId UserBalance
+      with
+        amount : Decimal
+      controller operator
+      do
+        let availableBalance = balance - lockedBalance
+        assertMsg "Insufficient available balance for debit" (amount <= availableBalance)
+        assertMsg "Debit amount must be positive" (amount > 0.0)
+        let newBalance = balance - amount
+        assertMsg "Balance would go below minimum" (newBalance >= minBalance)
+        create this with balance = newBalance
+    
+    -- Choice to receive funds (credit)
+    choice CreditBalance : ContractId UserBalance
+      with
+        amount : Decimal
+      controller operator
+      do
+        assertMsg "Credit amount must be positive" (amount > 0.0)
+        create this with balance = balance + amount

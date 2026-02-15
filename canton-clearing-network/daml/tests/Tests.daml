@@ -48,7 +48,7 @@ testSetup = do
       settlementFee = 0.001
       metadata = "First exchange"
   
-  -- Register a user
+  -- Register a user with balance
   userAccount <- submit operator do
     createCmd UserAccount with
       operator = operator
@@ -56,6 +56,17 @@ testSetup = do
       owner = user1
       isActive = True
       metadata = "First user"
+  
+  -- Create user balance
+  userBalance <- submit operator do
+    createCmd UserBalance with
+      operator = operator
+      userId = 1
+      owner = user1
+      assetId = 1
+      balance = 1000.0
+      lockedBalance = 0.0
+      minBalance = 0.0
   
   -- Register an asset
   asset <- submit operator do
@@ -104,7 +115,7 @@ testSettlement = do
   user1 <- allocateParty "User1"
   user2 <- allocateParty "User2"
   
-  -- Create settlement request
+  -- Create settlement request with enhanced transfers
   settlementCid <- submit operator do
     createCmd SettlementRequest with
       operator = operator
@@ -116,7 +127,9 @@ testSettlement = do
         fromUserId = 1
         toUserId = 2
         assetId = 1
-        amount = 100.0]
+        amount = 100.0
+        nonce = 1
+        maxAmount = Some 500.0]
       status = Pending
       createdAt = time (date 2026 Feb 15) 0 0 0
   
