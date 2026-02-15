@@ -1,0 +1,72 @@
+-- Exchange Template for Canton DCN
+-- Represents a registered exchange in the decentralized clearing network
+
+module Exchange where
+
+template RegisteredExchange
+  with
+    operator : Party          -- DCN Operator
+    exchangeId : Int          -- Unique exchange ID (up to 2^32)
+    exchangeParty : Party     -- The exchange entity
+    name : Text               -- Exchange name
+    isActive : Bool           -- Exchange status
+    settlementFee : Decimal   -- Fee for settlement operations
+    metadata : Text           -- Additional exchange metadata
+  where
+    signatory operator, exchangeParty
+    
+    key (operator, exchangeId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to deactivate the exchange
+    choice DeactivateExchange : ContractId RegisteredExchange
+      controller exchangeParty
+      do
+        create this with isActive = False
+    
+    -- Choice to activate the exchange
+    choice ActivateExchange : ContractId RegisteredExchange
+      controller exchangeParty
+      do
+        create this with isActive = True
+    
+    -- Choice to update settlement fee
+    choice UpdateSettlementFee : ContractId RegisteredExchange
+      with
+        newFee : Decimal
+      controller operator
+      do
+        create this with settlementFee = newFee
+    
+    -- Choice to update metadata
+    choice UpdateMetadata : ContractId RegisteredExchange
+      with
+        newMetadata : Text
+      controller exchangeParty
+      do
+        create this with metadata = newMetadata
+
+-- Exchange Session Template
+template ExchangeSession
+  with
+    operator : Party
+    exchangeId : Int
+    sessionId : Int
+    startTime : Time
+    endTime : Optional Time
+    isActive : Bool
+  where
+    signatory operator
+    
+    key (operator, exchangeId, sessionId) : (Party, Int, Int)
+    maintainer key._1
+    
+    -- Choice to close session
+    choice CloseSession : ContractId ExchangeSession
+      with
+        closeTime : Time
+      controller operator
+      do
+        create this with 
+          isActive = False
+          endTime = Some closeTime

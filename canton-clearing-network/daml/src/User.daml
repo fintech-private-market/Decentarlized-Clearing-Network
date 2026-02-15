@@ -1,0 +1,64 @@
+-- User Account Template for Canton DCN
+-- Represents a user account in the decentralized clearing network
+
+module User where
+
+template UserAccount
+  with
+    operator : Party        -- DCN Operator
+    userId : Int            -- Unique user ID (up to 2^64)
+    owner : Party           -- Owner of the account
+    isActive : Bool         -- Account status
+    metadata : Text         -- Additional user metadata
+  where
+    signatory operator, owner
+    
+    key (operator, userId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to deactivate the account
+    choice DeactivateAccount : ContractId UserAccount
+      controller owner
+      do
+        create this with isActive = False
+    
+    -- Choice to activate the account
+    choice ActivateAccount : ContractId UserAccount
+      controller owner
+      do
+        create this with isActive = True
+    
+    -- Choice to update metadata
+    choice UpdateMetadata : ContractId UserAccount
+      with
+        newMetadata : Text
+      controller owner
+      do
+        create this with metadata = newMetadata
+
+-- User Balance Template
+template UserBalance
+  with
+    operator : Party
+    userId : Int
+    owner : Party
+    assetId : Int
+    balance : Decimal
+    lockedBalance : Decimal
+  where
+    signatory operator
+    observer owner
+    
+    key (operator, userId, assetId) : (Party, Int, Int)
+    maintainer key._1
+    
+    -- Choice to update balance (only by operator)
+    choice UpdateBalance : ContractId UserBalance
+      with
+        newBalance : Decimal
+        newLockedBalance : Decimal
+      controller operator
+      do
+        create this with 
+          balance = newBalance
+          lockedBalance = newLockedBalance

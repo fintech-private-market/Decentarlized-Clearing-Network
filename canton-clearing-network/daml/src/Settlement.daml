@@ -1,0 +1,98 @@
+-- Settlement Template for Canton DCN
+-- Represents settlement operations in the decentralized clearing network
+
+module Settlement where
+
+import DA.List
+
+-- Settlement Request Template
+template SettlementRequest
+  with
+    operator : Party
+    settlementId : Int
+    exchangeId : Int
+    sessionId : Int
+    participants : [Party]      -- Parties involved in settlement
+    transfers : [Transfer]      -- List of transfers to execute
+    status : SettlementStatus
+    createdAt : Time
+  where
+    signatory operator
+    observer participants
+    
+    key (operator, settlementId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to approve settlement
+    choice ApproveSettlement : ContractId SettlementRequest
+      with
+        approver : Party
+      controller approver
+      do
+        assertMsg "Approver must be a participant" (elem approver participants)
+        create this with status = Approved
+    
+    -- Choice to execute settlement
+    choice ExecuteSettlement : ContractId SettlementRequest
+      controller operator
+      do
+        assertMsg "Settlement must be approved" (status == Approved)
+        create this with status = Executed
+    
+    -- Choice to cancel settlement
+    choice CancelSettlement : ContractId SettlementRequest
+      with
+        reason : Text
+      controller operator
+      do
+        create this with status = Cancelled
+
+-- Transfer data structure
+data Transfer = Transfer
+  with
+    fromUserId : Int
+    toUserId : Int
+    assetId : Int
+    amount : Decimal
+  deriving (Eq, Show)
+
+-- Settlement status
+data SettlementStatus = Pending | Approved | Executed | Cancelled | Failed
+  deriving (Eq, Show)
+
+-- Multi-party Settlement Template
+template MultiPartySettlement
+  with
+    operator : Party
+    settlementId : Int
+    parties : [Party]
+    balanceChanges : [(Int, Int, Decimal)]  -- (userId, assetId, change)
+    signatures : [Party]
+    isComplete : Bool
+  where
+    signatory operator
+    observer parties
+    
+    key (operator, settlementId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to add signature
+    choice AddSignature : ContractId MultiPartySettlement
+      with
+        signer : Party
+      controller signer
+      do
+        assertMsg "Signer must be a party" (elem signer parties)
+        assertMsg "Already signed" (notElem signer signatures)
+        let newSignatures = signer :: signatures
+        let complete = length newSignatures == length parties
+        create this with 
+          signatures = newSignatures
+          isComplete = complete
+    
+    -- Choice to finalize settlement
+    choice FinalizeSettlement : ()
+      controller operator
+      do
+        assertMsg "Settlement must be complete" isComplete
+        return ()

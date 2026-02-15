@@ -1,0 +1,91 @@
+-- Session Template for Canton DCN
+-- Represents trading and settlement sessions in the network
+
+module Session where
+
+import DA.Time
+
+-- Trading Session Template
+template TradingSession
+  with
+    operator : Party
+    sessionId : Int
+    exchangeId : Int
+    startTime : Time
+    endTime : Optional Time
+    status : SessionStatus
+    participatingUsers : [Int]  -- User IDs participating
+    activeAssets : [Int]        -- Asset IDs active in this session
+  where
+    signatory operator
+    
+    key (operator, sessionId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to open session
+    choice OpenSession : ContractId TradingSession
+      controller operator
+      do
+        assertMsg "Session already active" (status == Pending)
+        create this with status = Active
+    
+    -- Choice to close session
+    choice CloseSession : ContractId TradingSession
+      with
+        closeTime : Time
+      controller operator
+      do
+        assertMsg "Session must be active" (status == Active)
+        create this with 
+          status = Closed
+          endTime = Some closeTime
+    
+    -- Choice to add participant
+    choice AddParticipant : ContractId TradingSession
+      with
+        userId : Int
+      controller operator
+      do
+        create this with participatingUsers = userId :: participatingUsers
+    
+    -- Choice to add asset
+    choice AddAsset : ContractId TradingSession
+      with
+        assetId : Int
+      controller operator
+      do
+        create this with activeAssets = assetId :: activeAssets
+
+-- Session status
+data SessionStatus = Pending | Active | Closed | Suspended
+  deriving (Eq, Show)
+
+-- Settlement Session Template
+template SettlementSession
+  with
+    operator : Party
+    sessionId : Int
+    tradingSessionId : Int
+    settlementDeadline : Time
+    status : SessionStatus
+    settlementsProcessed : Int
+    totalSettlements : Int
+  where
+    signatory operator
+    
+    key (operator, sessionId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to process settlement
+    choice ProcessSettlement : ContractId SettlementSession
+      controller operator
+      do
+        create this with settlementsProcessed = settlementsProcessed + 1
+    
+    -- Choice to complete session
+    choice CompleteSession : ContractId SettlementSession
+      controller operator
+      do
+        assertMsg "All settlements must be processed" 
+          (settlementsProcessed == totalSettlements)
+        create this with status = Closed

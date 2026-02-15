@@ -1,0 +1,64 @@
+-- Asset Template for Canton DCN
+-- Represents a registered asset in the decentralized clearing network
+
+module Asset where
+
+template RegisteredAsset
+  with
+    operator : Party          -- DCN Operator
+    assetId : Int             -- Unique asset ID (up to 2^32)
+    symbol : Text             -- Asset symbol (e.g., "ETH", "BTC")
+    name : Text               -- Asset name
+    decimals : Int            -- Number of decimal places
+    isActive : Bool           -- Asset status
+    assetProvider : Party     -- Party providing the asset
+    metadata : Text           -- Additional asset metadata
+  where
+    signatory operator, assetProvider
+    
+    key (operator, assetId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to deactivate the asset
+    choice DeactivateAsset : ContractId RegisteredAsset
+      controller operator
+      do
+        create this with isActive = False
+    
+    -- Choice to activate the asset
+    choice ActivateAsset : ContractId RegisteredAsset
+      controller operator
+      do
+        create this with isActive = True
+    
+    -- Choice to update metadata
+    choice UpdateAssetMetadata : ContractId RegisteredAsset
+      with
+        newMetadata : Text
+      controller assetProvider
+      do
+        create this with metadata = newMetadata
+
+-- Asset Supply Template
+template AssetSupply
+  with
+    operator : Party
+    assetId : Int
+    totalSupply : Decimal
+    circulatingSupply : Decimal
+  where
+    signatory operator
+    
+    key (operator, assetId) : (Party, Int)
+    maintainer key._1
+    
+    -- Choice to update supply
+    choice UpdateSupply : ContractId AssetSupply
+      with
+        newTotalSupply : Decimal
+        newCirculatingSupply : Decimal
+      controller operator
+      do
+        create this with 
+          totalSupply = newTotalSupply
+          circulatingSupply = newCirculatingSupply

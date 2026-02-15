@@ -1,0 +1,131 @@
+-- Basic tests for Canton DCN templates
+
+module Tests where
+
+import Daml.Script
+import User
+import Exchange
+import Asset
+import Settlement
+import Session
+import DCNOperator
+
+-- Test setup
+testSetup : Script ()
+testSetup = do
+  -- Allocate parties
+  operator <- allocateParty "DCNOperator"
+  exchange1 <- allocateParty "Exchange1"
+  user1 <- allocateParty "User1"
+  assetProvider <- allocateParty "AssetProvider"
+  
+  -- Create operator role
+  operatorRole <- submit operator do
+    createCmd DCNOperatorRole with
+      operator = operator
+      isActive = True
+      permissions = [RegisterUser, RegisterExchange, RegisterAsset]
+  
+  -- Create network configuration
+  networkConfig <- submit operator do
+    createCmd NetworkConfiguration with
+      operator = operator
+      maxUsers = 1000000
+      maxExchanges = 10000
+      maxAssets = 1000
+      defaultSettlementFee = 0.001
+      emergencyStopEnabled = False
+      version = "0.1.0"
+  
+  -- Register an exchange
+  registeredExchange <- submit operator do
+    createCmd RegisteredExchange with
+      operator = operator
+      exchangeId = 1
+      exchangeParty = exchange1
+      name = "Exchange One"
+      isActive = True
+      settlementFee = 0.001
+      metadata = "First exchange"
+  
+  -- Register a user
+  userAccount <- submit operator do
+    createCmd UserAccount with
+      operator = operator
+      userId = 1
+      owner = user1
+      isActive = True
+      metadata = "First user"
+  
+  -- Register an asset
+  asset <- submit operator do
+    createCmd RegisteredAsset with
+      operator = operator
+      assetId = 1
+      symbol = "ETH"
+      name = "Ethereum"
+      decimals = 18
+      isActive = True
+      assetProvider = assetProvider
+      metadata = "Ethereum asset"
+  
+  return ()
+
+-- Test user account operations
+testUserOperations : Script ()
+testUserOperations = do
+  operator <- allocateParty "DCNOperator"
+  user1 <- allocateParty "User1"
+  
+  -- Create user account
+  userAccountCid <- submit operator do
+    createCmd UserAccount with
+      operator = operator
+      userId = 1
+      owner = user1
+      isActive = True
+      metadata = "Test user"
+  
+  -- Deactivate account
+  deactivatedCid <- submit user1 do
+    exerciseCmd userAccountCid DeactivateAccount
+  
+  -- Reactivate account
+  reactivatedCid <- submit user1 do
+    exerciseCmd deactivatedCid ActivateAccount
+  
+  return ()
+
+-- Test settlement operations
+testSettlement : Script ()
+testSettlement = do
+  operator <- allocateParty "DCNOperator"
+  exchange1 <- allocateParty "Exchange1"
+  user1 <- allocateParty "User1"
+  user2 <- allocateParty "User2"
+  
+  -- Create settlement request
+  settlementCid <- submit operator do
+    createCmd SettlementRequest with
+      operator = operator
+      settlementId = 1
+      exchangeId = 1
+      sessionId = 1
+      participants = [user1, user2]
+      transfers = [Transfer with
+        fromUserId = 1
+        toUserId = 2
+        assetId = 1
+        amount = 100.0]
+      status = Pending
+      createdAt = time (date 2026 Feb 15) 0 0 0
+  
+  -- Approve settlement
+  approvedCid <- submit user1 do
+    exerciseCmd settlementCid ApproveSettlement with approver = user1
+  
+  -- Execute settlement
+  executedCid <- submit operator do
+    exerciseCmd approvedCid ExecuteSettlement
+  
+  return ()

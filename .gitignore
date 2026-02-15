@@ -4,3 +4,24 @@ out/
 build/
 .idea/
 *.vim
+
+# Canton/Daml artifacts
+canton-clearing-network/daml/.daml/
+canton-clearing-network/daml/dist/
+*.dar
+*.log
+canton-clearing-network/canton-config/**/*.log
+
+# Java build artifacts
+canton-clearing-network/java-integration/target/
+canton-clearing-network/java-integration/build/
+
+# IDE
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
