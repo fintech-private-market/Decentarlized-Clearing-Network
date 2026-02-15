@@ -12,10 +12,15 @@ on:
       - 'canton-clearing-network/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     name: Build and Test Daml Project
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout repository
