@@ -5,8 +5,6 @@ source: src
 dependencies:
   - daml-prim
   - daml-stdlib
-build-options:
-  - --target=2.1
 parties:
   - DCNOperator
   - Exchange1
