@@ -18,6 +18,7 @@ Provides low cost, fast, and secure settlement for hybrid decentralized exchange
 | [**CANTON_MIGRATION_PLAN.md**](CANTON_MIGRATION_PLAN.md) | 📖 **Plano completo de migração (15-20 semanas)** / Complete migration plan (15-20 weeks) |
 | [**ARCHITECTURE_COMPARISON.md**](ARCHITECTURE_COMPARISON.md) | ⚖️ **Comparação detalhada Ethereum vs Canton** / Detailed Ethereum vs Canton comparison |
 | [**QUICKSTART_GUIDE.md**](QUICKSTART_GUIDE.md) | 🚀 **Guia rápido para começar desenvolvimento** / Quick start guide for development |
+| [**FAQ.md**](FAQ.md) | ❓ **Perguntas frequentes** / Frequently Asked Questions |
 
 ### 📌 Recomendação Principal / Main Recommendation
 
