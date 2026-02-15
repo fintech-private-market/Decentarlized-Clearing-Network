@@ -1,0 +1,88 @@
+name: Build Canton Clearing Network
+
+on:
+  push:
+    branches: [ main, develop, copilot/install-daml-sdk ]
+    paths:
+      - 'canton-clearing-network/**'
+      - '.github/workflows/build-canton.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'canton-clearing-network/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and Test Daml Project
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: Install Daml SDK
+        run: |
+          curl -sSL https://get.daml.com/ | sh
+          echo "$HOME/.daml/bin" >> $GITHUB_PATH
+      
+      - name: Verify Daml SDK installation
+        run: |
+          daml version
+          echo "Daml SDK installed successfully!"
+      
+      - name: Build Daml project
+        working-directory: canton-clearing-network/daml
+        run: |
+          echo "Building Canton Clearing Network..."
+          daml build
+          echo "Build completed successfully!"
+      
+      - name: Run Daml tests
+        working-directory: canton-clearing-network/daml
+        run: |
+          echo "Running tests..."
+          daml test
+          echo "Tests completed successfully!"
+      
+      - name: Verify DAR file
+        working-directory: canton-clearing-network/daml
+        run: |
+          if [ -f ".daml/dist/canton-clearing-network-0.1.0.dar" ]; then
+            echo "✅ DAR file created successfully!"
+            ls -lh .daml/dist/canton-clearing-network-0.1.0.dar
+            daml damlc inspect-dar .daml/dist/canton-clearing-network-0.1.0.dar
+          else
+            echo "❌ DAR file not found!"
+            exit 1
+          fi
+      
+      - name: Upload DAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: canton-clearing-network-dar
+          path: canton-clearing-network/daml/.daml/dist/canton-clearing-network-0.1.0.dar
+          retention-days: 30
+      
+      - name: Create build summary
+        if: success()
+        run: |
+          echo "## ✅ Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Build Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- **DAR File**: canton-clearing-network-0.1.0.dar" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size**: $(ls -lh canton-clearing-network/daml/.daml/dist/canton-clearing-network-0.1.0.dar | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "All tests passed successfully! ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the DAR artifact from this workflow run" >> $GITHUB_STEP_SUMMARY
+          echo "2. Deploy to Canton network" >> $GITHUB_STEP_SUMMARY
+          echo "3. Test with Canton SDK" >> $GITHUB_STEP_SUMMARY
